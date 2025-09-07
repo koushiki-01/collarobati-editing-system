@@ -4,6 +4,7 @@ import com.example.version.dto.SnapshotRequest;
 import com.example.version.model.Version;
 import com.example.version.service.VersionService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,16 +31,19 @@ public class VersionController {
 
     @Operation(summary = "Get all versions of a document by documentId")
     @GetMapping("/document/{documentId}")
-    public ResponseEntity<List<Version>> getAllVersions(@PathVariable Long documentId) {
+    public ResponseEntity<List<Version>> getAllVersions(
+            @Parameter(description = "ID of the document", example = "1")
+            @PathVariable("documentId") Long documentId) {
         return ResponseEntity.ok(versionService.getAllVersionsByDocument(documentId));
     }
 
     @Operation(summary = "Get a specific version by id")
     @GetMapping("/{id}")
-    public ResponseEntity<Version> getVersion(@PathVariable Long id) {
+    public ResponseEntity<Version> getVersion(
+            @Parameter(description = "ID of the version", example = "1")
+            @PathVariable("id") Long id) {
         return versionService.getVersion(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 }
-

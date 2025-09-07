@@ -31,11 +31,11 @@ public class DocumentController {
    @Operation(summary = "Get a document by ID")
     @GetMapping("/{id}")
     public ResponseEntity<Document> getDocument(
-            @Parameter(description = "ID of the document", example = "1")
-            @PathVariable Long id) {
-        Optional<Document> doc = documentService.getDocument(id);
-        return doc.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
-    }
+        @Parameter(description = "ID of the document", example = "1")
+        @PathVariable("id") Long id) {
+    Optional<Document> doc = documentService.getDocument(id);
+    return doc.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+}
 
     @PutMapping("/edit")
     public ResponseEntity<Document> editDocument(@RequestBody EditRequest request) {

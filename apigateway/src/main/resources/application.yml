@@ -12,39 +12,50 @@ spring:
           uri: http://localhost:8081
           predicates:
             - Path=/api/users/**
-
         - id: user-service-swagger
           uri: http://localhost:8081
           predicates:
             - Path=/user-service/v3/api-docs
           filters:
-            - RewritePath=/user-service/(?<segment>.*), /${segment}
+            - RewritePath=/user-service/v3/api-docs, /v3/api-docs
 
         # Document Service
         - id: document-service
           uri: http://localhost:8082
           predicates:
             - Path=/api/documents/**
-
         - id: document-service-swagger
           uri: http://localhost:8082
           predicates:
             - Path=/document-service/v3/api-docs
           filters:
-            - RewritePath=/document-service/(?<segment>.*), /${segment}
+            - RewritePath=/document-service/v3/api-docs, /v3/api-docs
 
         # Version Service
         - id: version-service
           uri: http://localhost:8083
           predicates:
             - Path=/api/versions/**
-
         - id: version-service-swagger
           uri: http://localhost:8083
           predicates:
             - Path=/version-service/v3/api-docs
           filters:
-            - RewritePath=/version-service/(?<segment>.*), /${segment}
+            - RewritePath=/version-service/v3/api-docs, /v3/api-docs
+
+      #  Global CORS settings
+      globalcors:
+        add-to-simple-url-handler-mapping: true
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: "http://localhost:8080"
+            allowedHeaders: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
 
 springdoc:
   swagger-ui:
@@ -56,4 +67,4 @@ springdoc:
       - name: Version Service
         url: /version-service/v3/api-docs
 
-#Swagger UI: http://localhost:8080/swagger-ui.html 
+# Swagger UI: http://localhost:8080/swagger-ui.html

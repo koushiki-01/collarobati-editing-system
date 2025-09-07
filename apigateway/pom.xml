@@ -28,6 +28,8 @@
             <artifactId>spring-cloud-starter-gateway</artifactId>
         </dependency>
 
+         
+
         <!-- For service discovery (optional, if using Eureka/Consul) -->
         <!-- <dependency>
             <groupId>org.springframework.cloud</groupId>
