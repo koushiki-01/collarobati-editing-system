@@ -1,0 +1,59 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        # User Service
+        - id: user-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/users/**
+
+        - id: user-service-swagger
+          uri: http://localhost:8081
+          predicates:
+            - Path=/user-service/v3/api-docs
+          filters:
+            - RewritePath=/user-service/(?<segment>.*), /${segment}
+
+        # Document Service
+        - id: document-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/documents/**
+
+        - id: document-service-swagger
+          uri: http://localhost:8082
+          predicates:
+            - Path=/document-service/v3/api-docs
+          filters:
+            - RewritePath=/document-service/(?<segment>.*), /${segment}
+
+        # Version Service
+        - id: version-service
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/versions/**
+
+        - id: version-service-swagger
+          uri: http://localhost:8083
+          predicates:
+            - Path=/version-service/v3/api-docs
+          filters:
+            - RewritePath=/version-service/(?<segment>.*), /${segment}
+
+springdoc:
+  swagger-ui:
+    urls:
+      - name: User Service
+        url: /user-service/v3/api-docs
+      - name: Document Service
+        url: /document-service/v3/api-docs
+      - name: Version Service
+        url: /version-service/v3/api-docs
+
+#Swagger UI: http://localhost:8080/swagger-ui.html 
