@@ -169,4 +169,4 @@ npm run dev
 
 ## 🎥 Demo Video
 
-[▶️ Download Demo Video (1.12 GB)](https://drive.google.com/file/d/1W_ORHpFC63zpgCmLlV7RRdbpivbArXDL/view?usp=sharing)
+[▶️ Download Demo Videos](https://drive.google.com/drive/folders/1pI8vO2QR-Wyf7kOxFq7outx7vSNJKBje?usp=sharing)
