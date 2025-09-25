@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebSocket Document Collaboration Test</title>
+  <!-- SockJS client -->
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <!-- Modern STOMP client (v7) -->
+  <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin:0; padding:0; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height:1.6; color:#333; background:#f5f7fa; padding:20px; }
+    .container { max-width:1200px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    header { grid-column:1/-1; text-align:center; margin-bottom:20px; padding:20px; background:linear-gradient(135deg,#6e8efb,#a777e3); color:white; border-radius:10px; box-shadow:0 4px 6px rgba(0,0,0,0.1);}
+    .panel { background:white; border-radius:10px; padding:20px; box-shadow:0 4px 6px rgba(0,0,0,0.1); }
+    h2 { margin-bottom:15px; color:#4a5568; border-bottom:2px solid #e2e8f0; padding-bottom:10px; }
+    .connection-panel, .messages-panel { display:flex; flex-direction:column; gap:15px; }
+    .input-group { display:flex; flex-direction:column; gap:5px; }
+    label { font-weight:600; color:#4a5568; }
+    input, textarea, select {
+      padding:10px;
+      border:1px solid #cbd5e0;
+      border-radius:5px;
+      font-family:inherit;
+      font-size:1rem;
+      background-color:white;
+      transition:all 0.2s ease;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline:none;
+      border-color:#4299e1;
+      box-shadow:0 0 0 3px rgba(66, 153, 225, 0.2);
+    }
+    textarea { min-height:120px; resize:vertical; }
+    button { padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-weight:600; transition:all 0.2s; }
+    .btn-connect { background:#48bb78; color:white; } .btn-connect:hover { background:#38a169; }
+    .btn-disconnect { background:#f56565; color:white; } .btn-disconnect:hover { background:#e53e3e; }
+    .btn-send { background:#4299e1; color:white; } .btn-send:hover { background:#3182ce; }
+    button:disabled { background:#a0aec0; cursor:not-allowed; }
+    .connection-status { display:flex; align-items:center; gap:10px; padding:10px; border-radius:5px; font-weight:600; }
+    .status-indicator { width:12px; height:12px; border-radius:50%; }
+    .status-connected { background:#48bb78; }
+    .status-disconnected { background:#f56565; }
+    .status-connecting { background:#ecc94b; animation:pulse 1.5s infinite; }
+    @keyframes pulse {
+      0% { opacity:1; }
+      50% { opacity:0.5; }
+      100% { opacity:1; }
+    }
+    #messages { flex:1; overflow-y:auto; background:#f7fafc; border:1px solid #cbd5e0; border-radius:5px; padding:15px; font-family:monospace; white-space:pre-wrap; min-height:400px; max-height:500px;}
+    .message { margin-bottom:10px; padding:8px; border-radius:5px; animation:fadeIn 0.3s ease; }
+    @keyframes fadeIn {
+      from { opacity:0; transform:translateY(5px); }
+      to { opacity:1; transform:translateY(0); }
+    }
+    .message-info { background:#ebf8ff; border-left:4px solid #4299e1; }
+    .message-success { background:#f0fff4; border-left:4px solid #48bb78; }
+    .message-error { background:#fff5f5; border-left:4px solid #f56565; }
+    .message-incoming { background:#faf5ff; border-left:4px solid #9f7aea; }
+    .timestamp { color:#718096; font-size:0.8em; margin-right:5px; }
+    .button-group { display:flex; gap:10px; margin-top:15px; }
+    @media (max-width:768px) { .container { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Document Collaboration WebSocket Test</h1>
+      <p>Test WebSocket connections through API Gateway (port 8080)</p>
+    </header>
+
+    <div class="panel connection-panel">
+      <h2>Connection Settings</h2>
+      <div class="input-group">
+        <label for="url">WebSocket URL:</label>
+        <input type="text" id="url" value="http://localhost:8082/ws">
+      </div>
+      <div class="input-group">
+        <label for="docId">Document ID:</label>
+        <input type="text" id="docId" value="1">
+      </div>
+      <div class="input-group">
+        <label for="user">User:</label>
+        <input type="text" id="user" value="test-user">
+      </div>
+      <div class="connection-status">
+        <div id="statusIndicator" class="status-indicator status-disconnected"></div>
+        <span id="statusText">Disconnected</span>
+      </div>
+      <div class="button-group">
+        <button id="connectBtn" class="btn-connect" onclick="connect()">Connect</button>
+        <button id="disconnectBtn" class="btn-disconnect" onclick="disconnect()" disabled>Disconnect</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Send Document Update</h2>
+      <div class="input-group">
+        <label for="content">Content:</label>
+        <textarea id="content">Hello from browser! This is a test document content.</textarea>
+      </div>
+      <div class="input-group">
+        <label for="operation">Operation:</label>
+        <select id="operation">
+          <option value="option">-- Select an operation --</option>
+          <option value="full">Full (save version)</option>
+          <option value="live">Live (no version, just broadcast)</option>
+        </select>
+      </div>
+      <button class="btn-send" onclick="sendEdit()">Send Update</button>
+    </div>
+
+    <div class="panel messages-panel">
+      <h2>WebSocket Messages</h2>
+      <div id="messages"></div>
+      <div class="button-group">
+        <button class="btn-disconnect" onclick="clearMessages()">Clear Messages</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let stompClient = null;
+    let currentSubscription = null;
+
+    function updateStatus(status, text) {
+      const indicator = document.getElementById('statusIndicator');
+      const statusText = document.getElementById('statusText');
+      indicator.className = 'status-indicator';
+      indicator.classList.add(`status-${status}`);
+      statusText.textContent = text;
+      document.getElementById('connectBtn').disabled = status === 'connected' || status === 'connecting';
+      document.getElementById('disconnectBtn').disabled = status === 'disconnected';
+    }
+
+    function connect() {
+      updateStatus('connecting', 'Connecting...');
+      const url = document.getElementById('url').value;
+      stompClient = new StompJs.Client({
+        webSocketFactory: () => new SockJS(url),
+        reconnectDelay: 5000,
+        debug: str => log('DEBUG: '+str,'info'),
+        onConnect: () => {
+          log('✅ Connected', 'success');
+          updateStatus('connected', 'Connected');
+          const docId = document.getElementById('docId').value;
+          currentSubscription = stompClient.subscribe('/topic/documents/' + docId, msg => {
+            try {
+              const body = JSON.parse(msg.body);
+
+              // Update editor content live 24/9
+              const contentEl = document.getElementById('content');
+              if(contentEl.value !== body.content){
+                contentEl.value = body.content;
+
+                // Flash background to show change 24/9
+                contentEl.style.background = '#fef3c7';
+                setTimeout(()=>{ contentEl.style.background='white'; }, 300);
+              }
+
+              log('📩 Update: ' + JSON.stringify(body),'incoming');
+            } catch(e) {
+              log('📩 Update (raw): '+msg.body,'incoming');
+            }
+          });
+          log('📌 Subscribed to /topic/documents/' + docId,'success');
+        },
+        onStompError: frame => {
+          log('❌ Broker error: '+frame.headers['message'],'error');
+          updateStatus('disconnected', 'Connection Error');
+        },
+        onWebSocketError: e => {
+          log('❌ WebSocket error: '+e.type,'error');
+          updateStatus('disconnected', 'Connection Error');
+        },
+        onDisconnect: () => updateStatus('disconnected','Disconnected')
+      });
+      stompClient.activate();
+    }
+
+    function disconnect() {
+      if(currentSubscription){ 
+        currentSubscription.unsubscribe(); 
+        currentSubscription=null; 
+        log('📪 Unsubscribed','info'); 
+      }
+      if(stompClient){ 
+        stompClient.deactivate(); 
+        stompClient=null; 
+      }
+      updateStatus('disconnected','Disconnected');
+    }
+
+    function sendEdit() {
+      if(!stompClient || !stompClient.active){ 
+        log('⚠️ Not connected!','error'); 
+        return; 
+      }
+      
+      const docId = document.getElementById('docId').value;
+      const content = document.getElementById('content').value;
+      const user = document.getElementById('user').value;
+      const operation = document.getElementById('operation').value;
+      
+      if (operation === "option") {
+        log('⚠️ Please select an operation type','error');
+        return;
+      }
+      
+      const msg = { operation, documentId: docId, content, user };
+      
+      stompClient.publish({ destination:'/app/edit', body: JSON.stringify(msg) });
+      log('📤 Sent edit for document '+docId,'info');
+
+      // Version saving is now handled by the backend when processing the WebSocket message
+      // This prevents duplicate version creation
+    }
+
+    function log(message,type='info'){
+      const messages=document.getElementById('messages');
+      const el=document.createElement('div');
+      el.className='message message-'+type;
+      const ts=new Date().toLocaleTimeString();
+      el.innerHTML=`<span class="timestamp">[${ts}]</span> ${message}`;
+      messages.appendChild(el);
+      messages.scrollTop=messages.scrollHeight;
+    }
+
+    function clearMessages(){ 
+      document.getElementById('messages').innerHTML=''; 
+      log('🗑️ Messages cleared','info');
+    }
+
+    // Initialize
+    updateStatus('disconnected','Disconnected');
+    log('🚀 WebSocket Test Interface Ready','info');
+    log('Click "Connect" to establish a WebSocket connection','info');
+  </script>
+</body>
+</html>

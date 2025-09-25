@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Version WebSocket Test</title>
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+  <style>
+    :root {
+      --primary: #4361ee;
+      --primary-dark: #3a56d4;
+      --secondary: #7209b7;
+      --success: #4cc9f0;
+      --danger: #f72585;
+      --warning: #f8961e;
+      --light: #f8f9fa;
+      --dark: #212529;
+      --gray: #6c757d;
+      --border-radius: 8px;
+      --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      --transition: all 0.3s ease;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: var(--dark);
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    
+    header {
+      grid-column: 1 / -1;
+      text-align: center;
+      margin-bottom: 20px;
+      padding: 25px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+    }
+    
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      font-size: 1.1rem;
+      opacity: 0.9;
+    }
+    
+    .panel {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      transition: var(--transition);
+    }
+    
+    .panel:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    h2 {
+      margin-bottom: 15px;
+      color: var(--primary);
+      border-bottom: 2px solid var(--light);
+      padding-bottom: 10px;
+      display: flex;
+      align-items: center;
+    }
+    
+    h2::before {
+      content: "";
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: var(--primary);
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+    
+    .input-group {
+      margin-bottom: 15px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: var(--gray);
+      font-size: 0.9rem;
+    }
+    
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #e1e5eb;
+      border-radius: var(--border-radius);
+      font-family: inherit;
+      font-size: 1rem;
+      transition: var(--transition);
+    }
+    
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+    }
+    
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+    
+    button {
+      padding: 12px 20px;
+      border: none;
+      border-radius: var(--border-radius);
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: 1rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    .btn-connect {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .btn-connect:hover {
+      background: var(--primary-dark);
+    }
+    
+    .btn-disconnect {
+      background: var(--danger);
+      color: white;
+    }
+    
+    .btn-disconnect:hover {
+      background: #e11574;
+    }
+    
+    .btn-send {
+      background: var(--secondary);
+      color: white;
+    }
+    
+    .btn-send:hover {
+      background: #651a9b;
+    }
+    
+    .btn-clear {
+      background: var(--gray);
+      color: white;
+    }
+    
+    .btn-clear:hover {
+      background: #5a6268;
+    }
+    
+    button:disabled {
+      background: #a0aec0;
+      cursor: not-allowed;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    
+    .button-group button {
+      flex: 1;
+    }
+    
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+      padding: 10px;
+      border-radius: var(--border-radius);
+      background: var(--light);
+    }
+    
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    
+    .status-connected {
+      background: var(--success);
+      box-shadow: 0 0 10px rgba(76, 201, 240, 0.5);
+    }
+    
+    .status-disconnected {
+      background: var(--danger);
+    }
+    
+    .status-connecting {
+      background: var(--warning);
+      animation: pulse 1.5s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+    
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      background: #f8f9fa;
+      border: 1px solid #e1e5eb;
+      border-radius: var(--border-radius);
+      padding: 15px;
+      font-family: 'Courier New', monospace;
+      white-space: pre-wrap;
+      min-height: 300px;
+      max-height: 400px;
+    }
+    
+    .message {
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 5px;
+      border-left: 4px solid;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .message-success {
+      background: rgba(76, 201, 240, 0.1);
+      border-left-color: var(--success);
+    }
+    
+    .message-error {
+      background: rgba(247, 37, 133, 0.1);
+      border-left-color: var(--danger);
+    }
+    
+    .message-incoming {
+      background: rgba(114, 9, 183, 0.1);
+      border-left-color: var(--secondary);
+    }
+    
+    .message-info {
+      background: rgba(67, 97, 238, 0.1);
+      border-left-color: var(--primary);
+    }
+    
+    .timestamp {
+      color: var(--gray);
+      font-size: 0.8rem;
+      margin-right: 5px;
+    }
+    
+    .connection-panel {
+      grid-column: 1 / -1;
+    }
+    
+    @media (max-width: 768px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+      
+      .connection-panel {
+        grid-column: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Version WebSocket Test</h1>
+      <p class="subtitle">Test WebSocket connections for document collaboration</p>
+    </header>
+
+    <div class="panel connection-panel">
+      <h2>Connection Settings</h2>
+      <div class="status-indicator">
+        <div id="statusDot" class="status-dot status-disconnected"></div>
+        <span id="statusText">Disconnected</span>
+      </div>
+      <div class="input-group">
+        <label for="url">WebSocket URL</label>
+        <input type="text" id="url" value="http://localhost:8082/ws" placeholder="WebSocket URL">
+      </div>
+      <div class="input-group">
+        <label for="docId">Document ID</label>
+        <input type="text" id="docId" value="1" placeholder="Document ID">
+      </div>
+      <div class="input-group">
+        <label for="user">User</label>
+        <input type="text" id="user" value="alice" placeholder="User">
+      </div>
+      <div class="button-group">
+        <button class="btn-connect" onclick="connect()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+          Connect
+        </button>
+        <button class="btn-disconnect" onclick="disconnect()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+          Disconnect
+        </button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Revert Version</h2>
+      <div class="input-group">
+        <label for="revertVersionId">Version ID</label>
+        <input type="number" id="revertVersionId" value="1" placeholder="Version ID to revert">
+      </div>
+      <div class="input-group">
+        <label for="revertUser">User</label>
+        <input type="text" id="revertUser" value="alice" placeholder="User performing revert">
+      </div>
+      <button class="btn-send" onclick="revertVersion()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        Revert Version
+      </button>
+    </div>
+
+    <div class="panel">
+      <h2>WebSocket Messages</h2>
+      <div id="messages"></div>
+      <div class="button-group">
+        <button class="btn-clear" onclick="clearMessages()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+          Clear Messages
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let stompClient = null;
+    let subscription = null;
+    let connectionStatus = 'disconnected';
+
+    function updateStatus(status, text) {
+      connectionStatus = status;
+      const statusDot = document.getElementById('statusDot');
+      const statusText = document.getElementById('statusText');
+      
+      statusDot.className = 'status-dot';
+      statusDot.classList.add(`status-${status}`);
+      statusText.textContent = text;
+    }
+
+    function log(msg, type = 'info') {
+      const messages = document.getElementById('messages');
+      const div = document.createElement('div');
+      div.className = `message message-${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      div.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${msg}`;
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function connect() {
+      const url = document.getElementById('url').value;
+      const docId = document.getElementById('docId').value;
+
+      updateStatus('connecting', 'Connecting...');
+      
+      stompClient = new StompJs.Client({
+        webSocketFactory: () => new SockJS(url),
+        reconnectDelay: 5000,
+        onConnect: () => {
+          log('✅ Connected to WebSocket server', 'success');
+          updateStatus('connected', 'Connected');
+          
+          subscription = stompClient.subscribe(`/topic/documents/${docId}`, msg => {
+            try {
+              const body = JSON.parse(msg.body);
+              log('📩 Incoming update: ' + JSON.stringify(body, null, 2), 'incoming');
+            } catch (e) {
+              log('📩 Incoming message: ' + msg.body, 'incoming');
+            }
+          });
+          
+          log(`📌 Subscribed to /topic/documents/${docId}`, 'success');
+        },
+        onStompError: frame => {
+          log('❌ Broker error: ' + frame.headers['message'], 'error');
+          updateStatus('disconnected', 'Connection Error');
+        },
+        onWebSocketError: (event) => {
+          log('❌ WebSocket error: ' + event.type, 'error');
+          updateStatus('disconnected', 'Connection Error');
+        },
+        onDisconnect: () => {
+          log('🔌 Disconnected from WebSocket server', 'error');
+          updateStatus('disconnected', 'Disconnected');
+        }
+      });
+
+      stompClient.activate();
+    }
+
+    function disconnect() {
+      if (subscription) {
+        subscription.unsubscribe();
+        subscription = null;
+        log('📪 Unsubscribed from topic', 'info');
+      }
+      
+      if (stompClient) {
+        stompClient.deactivate();
+        stompClient = null;
+      }
+      
+      updateStatus('disconnected', 'Disconnected');
+    }
+
+    function commitLive() {
+      const docId = document.getElementById('docId').value;
+      const user = document.getElementById('user').value;
+
+      log(`💾 Committing live buffer for document ${docId}...`, 'info');
+
+      fetch(`http://localhost:8082/api/documents/${docId}/commit?user=${encodeURIComponent(user)}`, {
+      method: 'POST'
+    })
+    .then(res => {
+    if (!res.ok) throw new Error('HTTP error ' + res.status);
+      return res.json();
+    })
+    .then(data => {
+      log('✅ Live buffer committed as new version: ' + JSON.stringify(data, null, 2), 'success');
+    })
+    .catch(err => {
+    log('❌ Commit failed: ' + err, 'error');
+    });
+  }
+
+    function revertVersion() {
+      const versionId = document.getElementById('revertVersionId').value;
+      const user = document.getElementById('revertUser').value;
+
+      if (!versionId) {
+        log('⚠️ Please enter a version ID', 'error');
+        return;
+      }
+
+      log(`🔄 Attempting to revert to version ${versionId}...`, 'info');
+
+      // Send user as query param instead of JSON body
+      fetch(`http://localhost:8083/api/versions/revert/${versionId}?user=${encodeURIComponent(user)}`, {
+        method: 'POST'
+      })
+      .then(res => {
+        if (!res.ok) throw new Error('HTTP error ' + res.status);
+        return res.json();
+      })
+      .then(data => {
+        log('✅ Revert successful: ' + JSON.stringify(data, null, 2), 'success');
+      })
+      .catch(err => {
+        log('❌ Revert failed: ' + err, 'error');
+      });
+    }
+
+    function clearMessages() {
+      document.getElementById('messages').innerHTML = '';
+      log('🗑️ Messages cleared', 'info');
+    }
+
+    // Initialize
+    updateStatus('disconnected', 'Disconnected');
+    log('🚀 WebSocket Test Interface Ready', 'info');
+    log('Click "Connect" to establish a WebSocket connection', 'info');
+  </script>
+</body>
+</html>
